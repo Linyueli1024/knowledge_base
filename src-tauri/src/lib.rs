@@ -9,6 +9,20 @@ pub struct VaultFile {
     pub name: String,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultDirectory {
+    pub relative_path: String,
+    pub name: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultListing {
+    pub directories: Vec<VaultDirectory>,
+    pub files: Vec<VaultFile>,
+}
+
 fn resolve_vault_path(vault: &str, relative: &str) -> Result<PathBuf, String> {
     let vault_path = Path::new(vault).canonicalize().map_err(|e| e.to_string())?;
     let rel = relative.trim();
@@ -29,24 +43,43 @@ fn resolve_vault_path(vault: &str, relative: &str) -> Result<PathBuf, String> {
 }
 
 #[tauri::command]
-fn vault_list_markdown(vault: String) -> Result<Vec<VaultFile>, String> {
+fn vault_list_markdown(vault: String) -> Result<VaultListing, String> {
     let root = Path::new(&vault).canonicalize().map_err(|e| e.to_string())?;
     if !root.is_dir() {
         return Err("不是有效文件夹".into());
     }
+    let mut directories = Vec::new();
     let mut files = Vec::new();
-    walk_md_files(&root, &root, &mut files)?;
+    walk_vault_entries(&root, &root, &mut directories, &mut files)?;
+    directories.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
     files.sort_by(|a, b| a.relative_path.cmp(&b.relative_path));
-    Ok(files)
+    Ok(VaultListing { directories, files })
 }
 
-fn walk_md_files(dir: &Path, vault_root: &Path, out: &mut Vec<VaultFile>) -> Result<(), String> {
+fn walk_vault_entries(
+    dir: &Path,
+    vault_root: &Path,
+    directories: &mut Vec<VaultDirectory>,
+    files: &mut Vec<VaultFile>,
+) -> Result<(), String> {
     for entry in fs::read_dir(dir).map_err(|e| e.to_string())? {
         let entry = entry.map_err(|e| e.to_string())?;
         let path = entry.path();
         let meta = entry.metadata().map_err(|e| e.to_string())?;
         if meta.is_dir() {
-            walk_md_files(&path, vault_root, out)?;
+            let rel = path
+                .strip_prefix(vault_root)
+                .map_err(|_| "路径错误".to_string())?;
+            let rel_str = rel.to_string_lossy().replace('\\', "/");
+            let name = path
+                .file_name()
+                .map(|s| s.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            directories.push(VaultDirectory {
+                relative_path: rel_str,
+                name,
+            });
+            walk_vault_entries(&path, vault_root, directories, files)?;
         } else if is_markdown(&path) {
             let rel = path
                 .strip_prefix(vault_root)
@@ -56,7 +89,7 @@ fn walk_md_files(dir: &Path, vault_root: &Path, out: &mut Vec<VaultFile>) -> Res
                 .file_name()
                 .map(|s| s.to_string_lossy().into_owned())
                 .unwrap_or_default();
-            out.push(VaultFile {
+            files.push(VaultFile {
                 relative_path: rel_str,
                 name,
             });
@@ -66,10 +99,10 @@ fn walk_md_files(dir: &Path, vault_root: &Path, out: &mut Vec<VaultFile>) -> Res
 }
 
 fn is_markdown(path: &Path) -> bool {
-    path.extension()
-        .and_then(|s| s.to_str())
-        .map(|ext| ext.eq_ignore_ascii_case("md"))
-        .unwrap_or(false)
+    match path.extension().and_then(|s| s.to_str()) {
+        Some(ext) => ext.eq_ignore_ascii_case("md"),
+        None => true,
+    }
 }
 
 #[tauri::command]
@@ -102,6 +135,82 @@ fn vault_create_file(vault: String, relative_path: String) -> Result<(), String>
     fs::write(&path, "# \n").map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+fn vault_create_dir(vault: String, relative_path: String) -> Result<(), String> {
+    let path = resolve_vault_path(&vault, &relative_path)?;
+    if path.exists() {
+        return Err("路径已存在".into());
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    fs::create_dir(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn vault_delete_file(vault: String, relative_path: String) -> Result<(), String> {
+    let path = resolve_vault_path(&vault, &relative_path)?;
+    if !path.is_file() {
+        return Err("文件不存在".into());
+    }
+    fs::remove_file(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn vault_delete_dir(vault: String, relative_path: String) -> Result<(), String> {
+    let path = resolve_vault_path(&vault, &relative_path)?;
+    if !path.is_dir() {
+        return Err("文件夹不存在".into());
+    }
+    fs::remove_dir_all(&path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn vault_rename_file(
+    vault: String,
+    old_relative_path: String,
+    new_relative_path: String,
+) -> Result<(), String> {
+    let old_path = resolve_vault_path(&vault, &old_relative_path)?;
+    if !old_path.is_file() {
+        return Err("文件不存在".into());
+    }
+
+    let new_path = resolve_vault_path(&vault, &new_relative_path)?;
+    if new_path.exists() {
+        return Err("目标文件已存在".into());
+    }
+
+    if let Some(parent) = new_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn vault_rename_dir(
+    vault: String,
+    old_relative_path: String,
+    new_relative_path: String,
+) -> Result<(), String> {
+    let old_path = resolve_vault_path(&vault, &old_relative_path)?;
+    if !old_path.is_dir() {
+        return Err("文件夹不存在".into());
+    }
+
+    let new_path = resolve_vault_path(&vault, &new_relative_path)?;
+    if new_path.exists() {
+        return Err("目标文件夹已存在".into());
+    }
+
+    if let Some(parent) = new_path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    fs::rename(&old_path, &new_path).map_err(|e| e.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -112,6 +221,11 @@ pub fn run() {
             vault_read_file,
             vault_write_file,
             vault_create_file,
+            vault_create_dir,
+            vault_delete_file,
+            vault_delete_dir,
+            vault_rename_file,
+            vault_rename_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -3,7 +3,8 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar";
 import { MenubarDemo } from "./components/menu-bar";
 import { VaultProvider } from "@/context/vault-context";
-import { MarkdownEditor } from "@/components/markdown-editor";
+// import { MarkdownEditor } from "@/components/markdown-editor";
+import { SimpleEditorComponent } from "@/components/simple-editor";
 
 function App({ children }: { children?: React.ReactNode }) {
   return (
@@ -16,7 +17,7 @@ function App({ children }: { children?: React.ReactNode }) {
 
           <main className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
             <SidebarTrigger />
-            {children ?? <MarkdownEditor />}
+            {children ?? <SimpleEditorComponent />}
           </main>
         </SidebarProvider>
       </div>

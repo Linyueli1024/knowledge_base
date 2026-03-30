@@ -5,8 +5,32 @@ export type VaultFileEntry = {
   name: string;
 };
 
-export function listMarkdown(vault: string): Promise<VaultFileEntry[]> {
-  return invoke<VaultFileEntry[]>("vault_list_markdown", { vault });
+export type VaultDirectoryEntry = {
+  relativePath: string;
+  name: string;
+};
+
+export type VaultListing = {
+  directories: VaultDirectoryEntry[];
+  files: VaultFileEntry[];
+};
+
+export function stripMarkdownExtension(value: string): string {
+  return value.replace(/\.md$/i, "");
+}
+
+export function stripMarkdownExtensionFromPath(relativePath: string): string {
+  return relativePath.replace(/\.md$/i, "");
+}
+
+export function listMarkdown(vault: string): Promise<VaultListing> {
+  return invoke<VaultListing>("vault_list_markdown", { vault }).then((listing) => ({
+    directories: listing.directories,
+    files: listing.files.map((file) => ({
+      ...file,
+      name: stripMarkdownExtension(file.name),
+    })),
+  }));
 }
 
 export function readMarkdownFile(
@@ -32,4 +56,41 @@ export function createMarkdownFile(
   relativePath: string,
 ): Promise<void> {
   return invoke("vault_create_file", { vault, relativePath });
+}
+
+export function createVaultDirectory(
+  vault: string,
+  relativePath: string,
+): Promise<void> {
+  return invoke("vault_create_dir", { vault, relativePath });
+}
+
+export function deleteVaultFile(
+  vault: string,
+  relativePath: string,
+): Promise<void> {
+  return invoke("vault_delete_file", { vault, relativePath });
+}
+
+export function deleteVaultDirectory(
+  vault: string,
+  relativePath: string,
+): Promise<void> {
+  return invoke("vault_delete_dir", { vault, relativePath });
+}
+
+export function renameVaultFile(
+  vault: string,
+  oldRelativePath: string,
+  newRelativePath: string,
+): Promise<void> {
+  return invoke("vault_rename_file", { vault, oldRelativePath, newRelativePath });
+}
+
+export function renameVaultDirectory(
+  vault: string,
+  oldRelativePath: string,
+  newRelativePath: string,
+): Promise<void> {
+  return invoke("vault_rename_dir", { vault, oldRelativePath, newRelativePath });
 }
