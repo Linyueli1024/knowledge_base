@@ -3,8 +3,8 @@ import { CollapsibleFileTree } from "./file-tree";
 
 export function AppSidebar() {
   return (
-    <Sidebar className="fixed bottom-0 top-[32px] h-full">
-      <SidebarContent className="h-full overflow-auto">
+    <Sidebar layout="inline" className="h-full shrink-0">
+      <SidebarContent className="h-full overflow-hidden">
         <CollapsibleFileTree />
       </SidebarContent>
     </Sidebar>

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRightIcon, FileIcon, FolderIcon, Plus, RefreshCw } from "lucide-react";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
@@ -18,6 +19,12 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVaultExplorer } from "@/context/vault-context";
 import {
@@ -32,6 +39,8 @@ type TreeNode = DirNode | FileNode;
 type RenameTarget =
   | { kind: "dir"; path: string; name: string }
   | { kind: "file"; path: string; name: string };
+type RootContextMenuState = { x: number; y: number } | null;
+const ROOT_CONTEXT_MENU_OFFSET = 2;
 
 function getAncestorPaths(relativePath: string): string[] {
   const normalized = relativePath.replace(/\\/g, "/");
@@ -116,7 +125,6 @@ export function CollapsibleFileTree() {
     selectFile,
     vaultPath,
     refreshFiles,
-    newNote,
     openNewNoteInDirectory,
     openNewFolderInDirectory,
     deleteNote,
@@ -128,6 +136,8 @@ export function CollapsibleFileTree() {
   } = useVaultExplorer();
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(() => new Set());
   const [renameTarget, setRenameTarget] = useState<RenameTarget | null>(null);
+  const [rootContextMenu, setRootContextMenu] = useState<RootContextMenuState>(null);
+  const rootContextMenuRef = useRef<HTMLDivElement | null>(null);
 
   const tree = useMemo(() => buildTree(directories, files), [directories, files]);
 
@@ -155,6 +165,49 @@ export function CollapsibleFileTree() {
       return changed ? next : prev;
     });
   }, [activeFile]);
+
+  useEffect(() => {
+    if (!rootContextMenu) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (target && rootContextMenuRef.current?.contains(target)) return;
+      setRootContextMenu(null);
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setRootContextMenu(null);
+      }
+    };
+
+    const handleWindowBlur = () => setRootContextMenu(null);
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("blur", handleWindowBlur);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("blur", handleWindowBlur);
+    };
+  }, [rootContextMenu]);
+
+  useLayoutEffect(() => {
+    if (!rootContextMenu || !rootContextMenuRef.current) return;
+
+    const rect = rootContextMenuRef.current.getBoundingClientRect();
+    const maxX = window.innerWidth - rect.width - ROOT_CONTEXT_MENU_OFFSET;
+    const maxY = window.innerHeight - rect.height - ROOT_CONTEXT_MENU_OFFSET;
+
+    const nextX = Math.min(Math.max(rootContextMenu.x, ROOT_CONTEXT_MENU_OFFSET), maxX);
+    const nextY = Math.min(Math.max(rootContextMenu.y, ROOT_CONTEXT_MENU_OFFSET), maxY);
+
+    if (nextX !== rootContextMenu.x || nextY !== rootContextMenu.y) {
+      setRootContextMenu({ x: nextX, y: nextY });
+    }
+  }, [rootContextMenu]);
 
   const setDirOpen = useCallback((path: string, open: boolean) => {
     setExpandedDirs((prev) => {
@@ -214,6 +267,18 @@ export function CollapsibleFileTree() {
     [renameFolder, renameNote, renameTarget],
   );
 
+  const closeRootContextMenu = useCallback(() => {
+    setRootContextMenu(null);
+  }, []);
+
+  const openRootContextMenu = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setRootContextMenu({
+      x: event.clientX + ROOT_CONTEXT_MENU_OFFSET,
+      y: event.clientY + ROOT_CONTEXT_MENU_OFFSET,
+    });
+  }, []);
+
   const renderNode = (node: TreeNode, depth: number) => {
     if (node.kind === "dir") {
       const isOpen = expandedDirs.has(node.path);
@@ -257,7 +322,7 @@ export function CollapsibleFileTree() {
                 disabled={loading}
                 onSelect={() => openNewNoteInDirectory(node.path)}
               >
-                新建笔记
+                新建文件
               </ContextMenuItem>
               <ContextMenuItem
                 disabled={loading}
@@ -353,7 +418,7 @@ export function CollapsibleFileTree() {
     );
 
   return (
-    <Card className="mx-auto h-full w-full gap-2 rounded-none border-0 shadow-none" size="sm">
+    <Card className="mx-auto h-full w-full rounded-none border-0 shadow-none gap-0! pb-0" size="sm">
       <CardHeader className="gap-2 pb-2">
         <Tabs defaultValue="explorer">
           <TabsList className="w-full">
@@ -365,17 +430,28 @@ export function CollapsibleFileTree() {
         </Tabs>
         {isTauriApp && vaultPath ? (
           <div className="flex gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              disabled={loading}
-              onClick={() => void newNote()}
-            >
-              <Plus className="size-4" />
-              新建
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="flex-1"
+                  disabled={loading}
+                >
+                  <Plus className="size-4" />
+                  新建
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                <DropdownMenuItem onSelect={() => openNewFolderInDirectory("")}>
+                  新建文件夹
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => openNewNoteInDirectory("")}>
+                  新建文件
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               type="button"
               variant="outline"
@@ -390,37 +466,74 @@ export function CollapsibleFileTree() {
           </div>
         ) : null}
       </CardHeader>
-      <CardContent className="flex h-full min-h-0 flex-1 flex-col pt-0 overflow-auto">
-        {isTauriApp && vaultPath ? (
-          <ContextMenu>
-            <ContextMenuTrigger asChild>
-              <div className="flex min-h-32 flex-1 rounded-md px-0 py-1 outline-none w-full">
-                {explorerBody}
-              </div>
-            </ContextMenuTrigger>
-            <ContextMenuContent>
-              <ContextMenuItem
+      {isTauriApp && vaultPath ? (
+        <CardContent
+          className="flex h-full min-h-0 flex-1 flex-col overflow-auto pt-4 outline-none"
+          onContextMenu={openRootContextMenu}
+        >
+          <div className="min-w-0 rounded-md py-1">
+            {explorerBody}
+          </div>
+          <div className="h-4 shrink-0" aria-hidden="true" />
+        </CardContent>
+      ) : (
+        <CardContent className="flex h-full min-h-0 flex-1 flex-col overflow-auto pt-4">
+          {explorerBody}
+          <div className="h-4 shrink-0" aria-hidden="true" />
+        </CardContent>
+      )}
+      {rootContextMenu
+        ? createPortal(
+            <div
+              ref={rootContextMenuRef}
+              className="fixed z-50 min-w-36 overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10"
+              style={{ left: rootContextMenu.x, top: rootContextMenu.y }}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setRootContextMenu({
+                  x: event.clientX + ROOT_CONTEXT_MENU_OFFSET,
+                  y: event.clientY + ROOT_CONTEXT_MENU_OFFSET,
+                });
+              }}
+            >
+              <button
+                type="button"
+                className="flex w-full cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
                 disabled={loading}
-                onSelect={() => openNewNoteInDirectory("")}
-              >
-                新建笔记
-              </ContextMenuItem>
-              <ContextMenuItem
-                disabled={loading}
-                onSelect={() => openNewFolderInDirectory("")}
+                onClick={() => {
+                  closeRootContextMenu();
+                  openNewFolderInDirectory("");
+                }}
               >
                 新建文件夹
-              </ContextMenuItem>
-              <ContextMenuSeparator />
-              <ContextMenuItem disabled={loading} onSelect={() => void refreshFiles()}>
+              </button>
+              <button
+                type="button"
+                className="flex w-full cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                disabled={loading}
+                onClick={() => {
+                  closeRootContextMenu();
+                  openNewNoteInDirectory("");
+                }}
+              >
+                新建文件
+              </button>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="flex w-full cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-sm outline-hidden select-none hover:bg-accent hover:text-accent-foreground"
+                disabled={loading}
+                onClick={() => {
+                  closeRootContextMenu();
+                  void refreshFiles();
+                }}
+              >
                 刷新
-              </ContextMenuItem>
-            </ContextMenuContent>
-          </ContextMenu>
-        ) : (
-          explorerBody
-        )}
-      </CardContent>
+              </button>
+            </div>,
+            document.body,
+          )
+        : null}
       <RenameEntryDialog
         open={renameTarget !== null}
         onOpenChange={(open) => {
