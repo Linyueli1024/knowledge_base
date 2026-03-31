@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -35,5 +36,17 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEQyREZBOTg2QjVDMkRBNgpSV1NtTFZ4cm1Qb3REYXdCZWZ4NWFSQ1RreS9BNWVtMlVJYTRBSjZaSGhLT1BoU2c1QlNlZGNFcgo=",
+      "active": true,
+      "endpoints": [
+        "https://github.com/Linyueli1024/knowledge_base/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

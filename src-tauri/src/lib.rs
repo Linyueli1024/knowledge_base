@@ -46,7 +46,9 @@ fn resolve_vault_path(vault: &str, relative: &str) -> Result<PathBuf, String> {
 
 #[tauri::command]
 fn vault_list_markdown(vault: String) -> Result<VaultListing, String> {
-    let root = Path::new(&vault).canonicalize().map_err(|e| e.to_string())?;
+    let root = Path::new(&vault)
+        .canonicalize()
+        .map_err(|e| e.to_string())?;
     if !root.is_dir() {
         return Err("不是有效文件夹".into());
     }
@@ -363,6 +365,8 @@ fn vault_rename_dir(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
