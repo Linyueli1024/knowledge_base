@@ -1,4 +1,5 @@
 import "./App.css";
+import { AgentSettingsDialog } from "@/components/agent-settings-dialog";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar";
 import { MenubarDemo } from "./components/menu-bar";
@@ -16,7 +17,10 @@ function App({ children }: { children?: React.ReactNode }) {
           <AppSidebar />
 
           <main className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
-            <SidebarTrigger />
+            <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+              <SidebarTrigger />
+              <AgentSettingsDialog />
+            </div>
             {children ?? <SimpleEditorComponent />}
           </main>
         </SidebarProvider>

@@ -36,6 +36,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "highlight.js": "^11.11.1",
+    "katex": "^0.16.44",
     "lodash.throttle": "^4.1.1",
     "lowlight": "^3.3.0",
     "lucide-react": "^1.7.0",

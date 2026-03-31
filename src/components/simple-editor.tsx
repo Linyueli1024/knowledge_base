@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 
+import { AgentChatSidebar } from "@/components/agent-chat-sidebar";
 import { EditableNoteTitle } from "@/components/editable-note-title";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
 import { useVault } from "@/context/vault-context";
@@ -43,40 +44,50 @@ export function SimpleEditorComponent() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
-        <div className="min-w-0 flex-1">
-          <EditableNoteTitle className="h-8 border-0 bg-transparent px-0 text-sm font-medium text-foreground shadow-none focus-visible:ring-0" />
+    <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-background xl:flex-row">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
+          <div className="min-w-0 flex-1">
+            <EditableNoteTitle className="h-8 border-0 bg-transparent px-0 text-sm font-medium text-foreground shadow-none focus-visible:ring-0" />
+            {activeFile ? (
+              <p className="truncate text-xs text-muted-foreground">
+                {stripMarkdownExtensionFromPath(activeFile.relativePath)}
+                {saving ? " · 保存中" : dirty ? " · 正在同步" : " · 已保存"}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">在左侧选择笔记，或使用菜单新建</p>
+            )}
+          </div>
+        </div>
+
+        {error ? <p className="shrink-0 px-4 py-2 text-sm text-destructive">{error}</p> : null}
+
+        <div className="min-h-0 flex-1">
           {activeFile ? (
-            <p className="truncate text-xs text-muted-foreground">
-              {stripMarkdownExtensionFromPath(activeFile.relativePath)}
-              {saving ? " · 保存中" : dirty ? " · 正在同步" : " · 已保存"}
-            </p>
+            <SimpleEditor
+              key={activeFile.relativePath}
+              documentId={activeFile.relativePath}
+              initialMarkdown={content}
+              noteRelativePath={activeFile.relativePath}
+              vaultPath={vaultPath}
+              editable={!loading}
+              onMarkdownChange={setContent}
+            />
           ) : (
-            <p className="text-xs text-muted-foreground">在左侧选择笔记，或使用菜单新建</p>
+            <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+              在左侧选择笔记，或使用菜单新建
+            </div>
           )}
         </div>
       </div>
 
-      {error ? <p className="shrink-0 px-4 py-2 text-sm text-destructive">{error}</p> : null}
+      <aside className="hidden h-full w-[23rem] shrink-0 border-l border-sidebar-border bg-sidebar xl:flex">
+        <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
+      </aside>
 
-      <div className="min-h-0 flex-1">
-        {activeFile ? (
-          <SimpleEditor
-            key={activeFile.relativePath}
-            documentId={activeFile.relativePath}
-            initialMarkdown={content}
-            noteRelativePath={activeFile.relativePath}
-            vaultPath={vaultPath}
-            editable={!loading}
-            onMarkdownChange={setContent}
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
-            在左侧选择笔记，或使用菜单新建
-          </div>
-        )}
-      </div>
+      <aside className="flex h-[26rem] w-full shrink-0 border-t border-sidebar-border bg-sidebar xl:hidden">
+        <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
+      </aside>
     </div>
   );
 }

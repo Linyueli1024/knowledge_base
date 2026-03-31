@@ -140,3 +140,88 @@ body,
   margin: 0;
   padding: 0;
 }
+
+.agent-rich-text {
+  color: var(--foreground);
+}
+
+.agent-rich-text > * + * {
+  margin-top: 0.9rem;
+}
+
+.agent-rich-text h1,
+.agent-rich-text h2,
+.agent-rich-text h3,
+.agent-rich-text h4,
+.agent-rich-text h5,
+.agent-rich-text h6 {
+  margin: 1.25rem 0 0.5rem;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.agent-rich-text h1 {
+  font-size: 1.3rem;
+}
+
+.agent-rich-text h2 {
+  font-size: 1.15rem;
+}
+
+.agent-rich-text h3 {
+  font-size: 1.05rem;
+}
+
+.agent-rich-text p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.agent-rich-text ul,
+.agent-rich-text ol {
+  margin: 0;
+  padding-left: 1.3rem;
+}
+
+.agent-rich-text li + li {
+  margin-top: 0.35rem;
+}
+
+.agent-rich-text blockquote {
+  margin: 0;
+  border-left: 3px solid var(--sidebar-border);
+  padding-left: 0.9rem;
+  color: var(--muted-foreground);
+}
+
+.agent-rich-text code {
+  border: 1px solid var(--border);
+  background: var(--muted);
+  border-radius: 0.45rem;
+  padding: 0.1rem 0.35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.agent-rich-text pre {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--muted) 78%, black 2%);
+  border-radius: 0.9rem;
+  padding: 0.95rem 1rem;
+}
+
+.agent-rich-text pre code {
+  border: 0;
+  background: transparent;
+  border-radius: 0;
+  padding: 0;
+  display: block;
+  line-height: 1.65;
+}
+
+.agent-rich-text a {
+  color: var(--foreground);
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
