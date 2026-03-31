@@ -46,6 +46,11 @@ function normalizeNoteBaseName(rawName: string): string {
   return stripMarkdownExtension(rawName.trim());
 }
 
+function toMarkdownRelativePath(relativePath: string): string {
+  const normalized = sanitizeParentDir(relativePath);
+  return normalized.toLowerCase().endsWith(".md") ? normalized : `${normalized}.md`;
+}
+
 type VaultContextValue = {
   vaultPath: string | null;
   activeFile: VaultFileEntry | null;
@@ -271,11 +276,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       const base = baseName;
       const parent = sanitizeParentDir(noteParentDir);
       const underParent = parent ? `${parent}/${base}` : base;
-      let relativePath = underParent;
+      let relativePath = toMarkdownRelativePath(underParent);
       let n = 1;
       while (files.some((f) => f.relativePath === relativePath)) {
         const suffix = parent ? `${parent}/${baseName}` : baseName;
-        relativePath = `${suffix}-${n}`;
+        relativePath = toMarkdownRelativePath(`${suffix}-${n}`);
         n += 1;
       }
       setLoading(true);
@@ -446,9 +451,11 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       const targetFileName = baseName;
 
       const { parent, name } = splitRelativePath(relativePath);
-      if (targetFileName === name) return;
+      if (targetFileName === stripMarkdownExtension(name)) return;
 
-      const nextRelativePath = parent ? `${parent}/${targetFileName}` : targetFileName;
+      const nextRelativePath = toMarkdownRelativePath(
+        parent ? `${parent}/${targetFileName}` : targetFileName,
+      );
 
       setLoading(true);
       setError(null);
