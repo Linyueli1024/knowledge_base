@@ -66,6 +66,8 @@ export function SimpleEditorComponent() {
             key={activeFile.relativePath}
             documentId={activeFile.relativePath}
             initialMarkdown={content}
+            noteRelativePath={activeFile.relativePath}
+            vaultPath={vaultPath}
             editable={!loading}
             onMarkdownChange={setContent}
           />

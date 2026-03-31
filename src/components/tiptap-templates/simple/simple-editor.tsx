@@ -6,7 +6,6 @@ import { EditorContent, EditorContext, useEditor } from "@tiptap/react"
 
 // --- Tiptap Core Extensions ---
 import { StarterKit } from "@tiptap/starter-kit"
-import { Image } from "@tiptap/extension-image"
 import { TaskItem, TaskList } from "@tiptap/extension-list"
 import { TextAlign } from "@tiptap/extension-text-align"
 import { Typography } from "@tiptap/extension-typography"
@@ -69,7 +68,8 @@ import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { createVaultImageUpload, VaultImage } from "@/lib/tiptap-image"
 import { CodeBlockHighlight, lowlight } from "@/lib/tiptap-code-block"
 import { markdownToTiptap, tiptapToMarkdown } from "@/components/markdown-editor"
 
@@ -188,11 +188,15 @@ const MobileToolbarContent = ({
 export function SimpleEditor({
   initialMarkdown = "",
   documentId = "default",
+  noteRelativePath,
+  vaultPath,
   editable = true,
   onMarkdownChange,
 }: {
   initialMarkdown?: string
   documentId?: string
+  noteRelativePath: string
+  vaultPath: string
   editable?: boolean
   onMarkdownChange?: (markdown: string) => void
 }) {
@@ -202,6 +206,29 @@ export function SimpleEditor({
     "main"
   )
   const toolbarRef = useRef<HTMLDivElement>(null)
+  const markdownSyncTimerRef = useRef<number | null>(null)
+
+  const flushMarkdownChange = (currentEditor: Editor) => {
+    onMarkdownChange?.(tiptapToMarkdown(currentEditor))
+  }
+
+  const uploadImage = async (
+    file: File,
+    onProgress?: (event: { progress: number }) => void,
+    abortSignal?: AbortSignal,
+  ) => {
+    const { src, localSrc } = await createVaultImageUpload(
+      file,
+      {
+        vaultPath,
+        noteRelativePath,
+      },
+      onProgress,
+      abortSignal,
+    )
+
+    return JSON.stringify({ src, localSrc })
+  }
 
   const editor = useEditor({
     immediatelyRender: false,
@@ -215,7 +242,10 @@ export function SimpleEditor({
         class: "simple-editor",
       },
     },
-    content: markdownToTiptap(initialMarkdown),
+    content: markdownToTiptap(initialMarkdown, {
+      vaultPath,
+      noteRelativePath,
+    }),
     editable,
     extensions: [
       StarterKit.configure({
@@ -235,7 +265,9 @@ export function SimpleEditor({
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight.configure({ multicolor: true }),
-      Image,
+      VaultImage.configure({
+        allowBase64: true,
+      }),
       Typography,
       Superscript,
       Subscript,
@@ -244,12 +276,21 @@ export function SimpleEditor({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: uploadImage,
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
     onUpdate: ({ editor: currentEditor }) => {
-      onMarkdownChange?.(tiptapToMarkdown(currentEditor as Editor))
+      if (!onMarkdownChange) return
+
+      if (markdownSyncTimerRef.current !== null) {
+        window.clearTimeout(markdownSyncTimerRef.current)
+      }
+
+      markdownSyncTimerRef.current = window.setTimeout(() => {
+        markdownSyncTimerRef.current = null
+        flushMarkdownChange(currentEditor as Editor)
+      }, 300)
     },
   })
 
@@ -268,6 +309,38 @@ export function SimpleEditor({
     if (!editor) return
     editor.setEditable(editable)
   }, [editor, editable])
+
+  useEffect(() => {
+    return () => {
+      if (markdownSyncTimerRef.current !== null) {
+        window.clearTimeout(markdownSyncTimerRef.current)
+        markdownSyncTimerRef.current = null
+      }
+
+      if (editor && onMarkdownChange) {
+        flushMarkdownChange(editor)
+      }
+    }
+  }, [editor, onMarkdownChange])
+
+  useEffect(() => {
+    if (!editor || !onMarkdownChange) return
+
+    const handleBlur = () => {
+      if (markdownSyncTimerRef.current !== null) {
+        window.clearTimeout(markdownSyncTimerRef.current)
+        markdownSyncTimerRef.current = null
+      }
+
+      flushMarkdownChange(editor)
+    }
+
+    editor.on("blur", handleBlur)
+
+    return () => {
+      editor.off("blur", handleBlur)
+    }
+  }, [editor, onMarkdownChange])
 
   return (
     <div className="simple-editor-wrapper" data-document-id={documentId}>

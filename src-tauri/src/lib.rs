@@ -1,6 +1,8 @@
+use base64::Engine;
 use serde::Serialize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +69,14 @@ fn walk_vault_entries(
         let path = entry.path();
         let meta = entry.metadata().map_err(|e| e.to_string())?;
         if meta.is_dir() {
+            if path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .map(|name| name == ".attachments")
+                .unwrap_or(false)
+            {
+                continue;
+            }
             let rel = path
                 .strip_prefix(vault_root)
                 .map_err(|_| "路径错误".to_string())?;
@@ -105,6 +115,92 @@ fn is_markdown(path: &Path) -> bool {
     }
 }
 
+fn normalize_relative_path(relative: &str) -> PathBuf {
+    let mut path = PathBuf::new();
+    for part in relative.replace('\\', "/").split('/') {
+        if part.is_empty() || part == "." {
+            continue;
+        }
+        path.push(part);
+    }
+    path
+}
+
+fn to_unix_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+fn sanitize_file_stem(file_name: &str) -> String {
+    let stem = Path::new(file_name)
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .unwrap_or("image");
+
+    let sanitized = stem
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+
+    if sanitized.is_empty() {
+        "image".into()
+    } else {
+        sanitized
+    }
+}
+
+fn attachment_directory_for_note(note_relative_path: &str) -> PathBuf {
+    let note_path = normalize_relative_path(note_relative_path);
+    let mut attachment_dir = PathBuf::from(".attachments");
+
+    if let Some(parent) = note_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            attachment_dir.push(parent);
+        }
+    }
+
+    let stem = note_path
+        .file_stem()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .unwrap_or("note");
+
+    attachment_dir.push(stem);
+    attachment_dir
+}
+
+fn make_relative_path(from: &Path, to: &Path) -> PathBuf {
+    let from_components = from.components().collect::<Vec<_>>();
+    let to_components = to.components().collect::<Vec<_>>();
+
+    let mut shared = 0usize;
+    while shared < from_components.len()
+        && shared < to_components.len()
+        && from_components[shared] == to_components[shared]
+    {
+        shared += 1;
+    }
+
+    let mut result = PathBuf::new();
+
+    for _ in shared..from_components.len() {
+        result.push("..");
+    }
+
+    for component in &to_components[shared..] {
+        result.push(component.as_os_str());
+    }
+
+    result
+}
+
 #[tauri::command]
 fn vault_read_file(vault: String, relative_path: String) -> Result<String, String> {
     let path = resolve_vault_path(&vault, &relative_path)?;
@@ -121,6 +217,59 @@ fn vault_write_file(vault: String, relative_path: String, content: String) -> Re
         fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     fs::write(&path, content).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn vault_write_attachment(
+    vault: String,
+    note_relative_path: String,
+    file_name: String,
+    contents_base64: String,
+) -> Result<String, String> {
+    let _note_path = resolve_vault_path(&vault, &note_relative_path)?;
+    let attachment_dir_relative = attachment_directory_for_note(&note_relative_path);
+    let attachment_dir_path = resolve_vault_path(&vault, &to_unix_path(&attachment_dir_relative))?;
+    fs::create_dir_all(&attachment_dir_path).map_err(|e| e.to_string())?;
+
+    let extension = Path::new(&file_name)
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| !value.is_empty())
+        .map(|value| format!(".{}", value))
+        .unwrap_or_default();
+    let file_stem = sanitize_file_stem(&file_name);
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|e| e.to_string())?
+        .as_millis();
+
+    let mut counter = 0usize;
+    let saved_relative_path = loop {
+        let suffix = if counter == 0 {
+            format!("{}", timestamp)
+        } else {
+            format!("{}-{}", timestamp, counter)
+        };
+        let file_name = format!("{}-{}{}", file_stem, suffix, extension);
+        let candidate_relative = attachment_dir_relative.join(file_name);
+        let candidate_path = resolve_vault_path(&vault, &to_unix_path(&candidate_relative))?;
+        if !candidate_path.exists() {
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(contents_base64.as_bytes())
+                .map_err(|e| e.to_string())?;
+            fs::write(&candidate_path, bytes).map_err(|e| e.to_string())?;
+            break candidate_relative;
+        }
+        counter += 1;
+    };
+
+    let note_dir = normalize_relative_path(&note_relative_path)
+        .parent()
+        .map(Path::to_path_buf)
+        .unwrap_or_default();
+    let markdown_relative_path = make_relative_path(&note_dir, &saved_relative_path);
+
+    Ok(to_unix_path(&markdown_relative_path))
 }
 
 #[tauri::command]
@@ -220,6 +369,7 @@ pub fn run() {
             vault_list_markdown,
             vault_read_file,
             vault_write_file,
+            vault_write_attachment,
             vault_create_file,
             vault_create_dir,
             vault_delete_file,

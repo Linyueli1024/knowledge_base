@@ -458,13 +458,29 @@ export const ImageUploadNode: React.FC<NodeViewProps> = (props) => {
 
       if (isValidPosition(pos)) {
         const imageNodes = urls.map((url, index) => {
+          let imageSrc = url
+          let localSrc: string | null = null
+
+          try {
+            const parsed = JSON.parse(url) as { src?: string; localSrc?: string }
+            if (typeof parsed.src === "string") {
+              imageSrc = parsed.src
+            }
+            if (typeof parsed.localSrc === "string") {
+              localSrc = parsed.localSrc
+            }
+          } catch {
+            // Keep backwards compatibility with upload handlers that return a plain string.
+          }
+
           const filename =
             files[index]?.name.replace(/\.[^/.]+$/, "") || "unknown"
           return {
             type: extension.options.type,
             attrs: {
               ...extension.options,
-              src: url,
+              src: imageSrc,
+              localSrc,
               alt: filename,
               title: filename,
             },

@@ -25,9 +25,15 @@ import {
   normalizeCodeBlockLanguage,
   serializeCodeBlockLanguage,
 } from "@/lib/tiptap-code-block";
+import { resolveImageAttrs, serializeImageAttrs } from "@/lib/tiptap-image";
 import { stripMarkdownExtensionFromPath } from "@/lib/vault-bridge";
 
-function mapPmToTiptap(node: any): any {
+type MarkdownConversionContext = {
+  noteRelativePath?: string | null;
+  vaultPath?: string | null;
+};
+
+function mapPmToTiptap(node: any, context?: MarkdownConversionContext): any {
   if (!node || typeof node !== "object") return node;
 
   const typeMap: Record<string, string> = {
@@ -51,6 +57,8 @@ function mapPmToTiptap(node: any): any {
           ...node.attrs,
           language: normalizeCodeBlockLanguage(node.attrs?.params),
         }
+      : node.type === "image"
+        ? resolveImageAttrs(node.attrs, context)
       : node.attrs;
 
   return {
@@ -63,7 +71,9 @@ function mapPmToTiptap(node: any): any {
           type: markMap[mark.type] ?? mark.type,
         }))
       : node.marks,
-    content: Array.isArray(node.content) ? node.content.map(mapPmToTiptap) : node.content,
+    content: Array.isArray(node.content)
+      ? node.content.map((child: any) => mapPmToTiptap(child, context))
+      : node.content,
   };
 }
 
@@ -90,6 +100,8 @@ function mapTiptapToPm(node: any): any {
           ...node.attrs,
           params: serializeCodeBlockLanguage(node.attrs?.language),
         }
+      : node.type === "image"
+        ? serializeImageAttrs(node.attrs)
       : node.attrs;
 
   return {
@@ -118,10 +130,13 @@ function fallbackDocFromText(markdown: string): JSONContent {
   };
 }
 
-export function markdownToTiptap(markdown: string): JSONContent {
+export function markdownToTiptap(
+  markdown: string,
+  context?: MarkdownConversionContext,
+): JSONContent {
   try {
     const pmDoc = defaultMarkdownParser.parse(markdown);
-    return mapPmToTiptap(pmDoc.toJSON());
+    return mapPmToTiptap(pmDoc.toJSON(), context);
   } catch {
     return fallbackDocFromText(markdown);
   }

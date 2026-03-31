@@ -51,6 +51,20 @@ export function writeMarkdownFile(
   return invoke("vault_write_file", { vault, relativePath, content });
 }
 
+export function writeVaultAttachment(
+  vault: string,
+  noteRelativePath: string,
+  fileName: string,
+  contentsBase64: string,
+): Promise<string> {
+  return invoke<string>("vault_write_attachment", {
+    vault,
+    noteRelativePath,
+    fileName,
+    contentsBase64,
+  });
+}
+
 export function createMarkdownFile(
   vault: string,
   relativePath: string,
