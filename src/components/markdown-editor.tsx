@@ -19,6 +19,12 @@ import {
 import { EditableNoteTitle } from "@/components/editable-note-title";
 import { Button } from "@/components/ui/button";
 import { useVault } from "@/context/vault-context";
+import {
+  CodeBlockHighlight,
+  lowlight,
+  normalizeCodeBlockLanguage,
+  serializeCodeBlockLanguage,
+} from "@/lib/tiptap-code-block";
 import { stripMarkdownExtensionFromPath } from "@/lib/vault-bridge";
 
 function mapPmToTiptap(node: any): any {
@@ -39,9 +45,18 @@ function mapPmToTiptap(node: any): any {
     em: "italic",
   };
 
+  const attrs =
+    node.type === "code_block"
+      ? {
+          ...node.attrs,
+          language: normalizeCodeBlockLanguage(node.attrs?.params),
+        }
+      : node.attrs;
+
   return {
     ...node,
     type: typeMap[node.type] ?? node.type,
+    attrs,
     marks: Array.isArray(node.marks)
       ? node.marks.map((mark: any) => ({
           ...mark,
@@ -69,9 +84,18 @@ function mapTiptapToPm(node: any): any {
     italic: "em",
   };
 
+  const attrs =
+    node.type === "codeBlock"
+      ? {
+          ...node.attrs,
+          params: serializeCodeBlockLanguage(node.attrs?.language),
+        }
+      : node.attrs;
+
   return {
     ...node,
     type: typeMap[node.type] ?? node.type,
+    attrs,
     marks: Array.isArray(node.marks)
       ? node.marks.map((mark: any) => ({
           ...mark,
@@ -261,13 +285,16 @@ function TiptapDocument({
       shouldRerenderOnTransaction={false}
       extensions={[
         StarterKit.configure({
-          codeBlock: {
-            HTMLAttributes: {
-              class: "rounded-md bg-muted px-3 py-2 font-mono text-sm",
-            },
-          },
+          codeBlock: false,
           heading: {
             levels: [1, 2, 3, 4, 5, 6],
+          },
+        }),
+        CodeBlockHighlight.configure({
+          lowlight,
+          defaultLanguage: "plaintext",
+          HTMLAttributes: {
+            class: "rounded-md bg-muted px-3 py-2 font-mono text-sm",
           },
         }),
         Link.configure({

@@ -70,6 +70,7 @@ import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 // --- Lib ---
 import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { CodeBlockHighlight, lowlight } from "@/lib/tiptap-code-block"
 import { markdownToTiptap, tiptapToMarkdown } from "@/components/markdown-editor"
 
 // --- Styles ---
@@ -218,11 +219,16 @@ export function SimpleEditor({
     editable,
     extensions: [
       StarterKit.configure({
+        codeBlock: false,
         horizontalRule: false,
         link: {
           openOnClick: false,
           enableClickSelection: true,
         },
+      }),
+      CodeBlockHighlight.configure({
+        lowlight,
+        defaultLanguage: "plaintext",
       }),
       HorizontalRule,
       TextAlign.configure({ types: ["heading", "paragraph"] }),
