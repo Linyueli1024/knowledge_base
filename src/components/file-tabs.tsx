@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MAX_OPEN_FILES, useVault } from "@/context/vault-context";
+import { useVault } from "@/context/vault-context";
 import { cn } from "@/lib/utils";
 import { ChevronDown, X } from "lucide-react";
 import { Button } from "./ui/button";

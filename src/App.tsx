@@ -1,14 +1,12 @@
 import "./App.css";
 import { AgentSettingsDialog } from "@/components/agent-settings-dialog";
 import { FileTabs } from "@/components/file-tabs";
-import { UpdateControls } from "@/components/update-controls";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/sidebar";
 import { MenubarDemo } from "./components/menu-bar";
 import { AppUpdaterProvider } from "@/context/app-updater-context";
 import { VaultProvider } from "@/context/vault-context";
 import { useIsBreakpoint } from "@/hooks/use-is-breakpoint";
-// import { MarkdownEditor } from "@/components/markdown-editor";
 import { SimpleEditorComponent } from "@/components/simple-editor";
 
 const AGENT_DOCK_MIN_PX = 1280;
@@ -21,7 +19,6 @@ function App({ children }: { children?: React.ReactNode }) {
       <VaultProvider>
         <div className="flex h-screen w-screen flex-col overflow-hidden">
           <MenubarDemo />
-
           <SidebarProvider className="flex flex-1 min-h-0">
             <AppSidebar />
 
