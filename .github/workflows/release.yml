@@ -71,4 +71,3 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target ${{ matrix.target }}
-          args: --target ${{ matrix.target }}
