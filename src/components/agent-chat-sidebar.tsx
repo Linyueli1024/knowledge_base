@@ -261,7 +261,7 @@ export function AgentChatSidebar({
   return (
     <aside className="flex h-full min-h-0 w-full flex-col bg-sidebar text-sidebar-foreground">
       <div className="border-b border-sidebar-border px-4 py-3">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start  gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <div className="flex size-8 items-center justify-center rounded-xl bg-sidebar-accent text-sidebar-accent-foreground">
@@ -269,19 +269,15 @@ export function AgentChatSidebar({
               </div>
               <div>
                 <p className="text-sm font-semibold">Agent</p>
-                <p className="text-xs text-muted-foreground">Claude Code / Codex 风格侧栏</p>
+                <p className="text-xs text-muted-foreground">{settings.model || settings.provider}</p>
               </div>
             </div>
-          </div>
-
-          <div className="rounded-full border border-sidebar-border bg-background/80 px-2 py-1 text-[11px] text-muted-foreground">
-            {settings.model || settings.provider}
           </div>
         </div>
 
         <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
           <span className={cn("inline-flex size-2 rounded-full", isResponding ? "bg-amber-500" : "bg-emerald-500")} />
-          {isResponding ? "正在流式生成回答" : `${settings.provider} 已连接当前上下文`}
+          {isResponding ? "正在流式生成回答" : `${settings.model || settings.provider} 已连接当前上下文`}
         </div>
 
         {activePath ? (

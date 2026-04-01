@@ -1,10 +1,18 @@
-import { FileText } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bot, FileText } from "lucide-react";
 
 import { AgentChatSidebar } from "@/components/agent-chat-sidebar";
 import { EditableNoteTitle } from "@/components/editable-note-title";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useVault } from "@/context/vault-context";
+import { useIsBreakpoint } from "@/hooks/use-is-breakpoint";
+import { cn } from "@/lib/utils";
 import { stripMarkdownExtensionFromPath } from "@/lib/vault-bridge";
+
+/** 与 Tailwind `xl`（1280px）一致：以上并排侧栏，以下用抽屉避免 Agent 堆在编辑器下方 */
+const AGENT_DOCK_MIN_PX = 1280;
 
 export function SimpleEditorComponent() {
   const {
@@ -18,6 +26,15 @@ export function SimpleEditorComponent() {
     error,
     isTauriApp,
   } = useVault();
+
+  const isAgentDocked = useIsBreakpoint("min", AGENT_DOCK_MIN_PX);
+  const [agentSheetOpen, setAgentSheetOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAgentDocked) {
+      setAgentSheetOpen(false);
+    }
+  }, [isAgentDocked]);
 
   if (!isTauriApp) {
     return (
@@ -44,8 +61,13 @@ export function SimpleEditorComponent() {
   }
 
   return (
-    <div className="flex flex-1 min-h-0 min-w-0 flex-col bg-background xl:flex-row">
-      <div className="flex min-w-0 flex-1 flex-col">
+    <div
+      className={cn(
+        "flex min-h-0 min-w-0 flex-1 bg-background",
+        isAgentDocked ? "flex-row" : "flex-col"
+      )}
+    >
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
           <div className="min-w-0 flex-1">
             <EditableNoteTitle className="h-8 border-0 bg-transparent px-0 text-sm font-medium text-foreground shadow-none focus-visible:ring-0" />
@@ -58,6 +80,18 @@ export function SimpleEditorComponent() {
               <p className="text-xs text-muted-foreground">在左侧选择笔记，或使用菜单新建</p>
             )}
           </div>
+          {!isAgentDocked ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-1.5"
+              onClick={() => setAgentSheetOpen(true)}
+            >
+              <Bot className="size-4" />
+              Agent
+            </Button>
+          ) : null}
         </div>
 
         {error ? <p className="shrink-0 px-4 py-2 text-sm text-destructive">{error}</p> : null}
@@ -81,13 +115,21 @@ export function SimpleEditorComponent() {
         </div>
       </div>
 
-      <aside className="hidden h-full w-[23rem] shrink-0 border-l border-sidebar-border bg-sidebar xl:flex">
-        <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
-      </aside>
-
-      <aside className="flex h-[26rem] w-full shrink-0 border-t border-sidebar-border bg-sidebar xl:hidden">
-        <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
-      </aside>
+      {isAgentDocked ? (
+        <aside className="flex h-full min-h-0 w-[23rem] shrink-0 border-l border-sidebar-border bg-sidebar">
+          <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
+        </aside>
+      ) : (
+        <Sheet open={agentSheetOpen} onOpenChange={setAgentSheetOpen}>
+          <SheetContent
+            side="right"
+            showCloseButton
+            className="flex h-full min-h-0 w-[min(100vw,23rem)] max-w-[23rem] flex-col gap-0 border-l border-sidebar-border bg-sidebar p-0 sm:max-w-[23rem]"
+          >
+            <AgentChatSidebar activePath={activeFile?.relativePath} noteContent={content} />
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
