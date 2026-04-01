@@ -9,13 +9,14 @@ import {
 } from "@/components/ui/menubar";
 import { useAppUpdater } from "@/context/app-updater-context";
 import { useVaultExplorer } from "@/context/vault-context";
+import { UpdateControls } from "./update-controls";
 
 export function MenubarDemo() {
   const { openVaultFolder, newNote, isTauriApp } = useVaultExplorer();
-  const { checkForUpdates, status } = useAppUpdater();
+  // const { checkForUpdates, status } = useAppUpdater();
 
   return (
-    <Menubar className="h-8 w-full rounded-none">
+    <Menubar className="h-8 w-full rounded-none justify-between">
       <MenubarMenu>
         <MenubarTrigger>文件</MenubarTrigger>
         <MenubarContent>
@@ -36,7 +37,7 @@ export function MenubarDemo() {
         </MenubarContent>
       </MenubarMenu>
 
-      <MenubarMenu>
+      {/* <MenubarMenu>
         <MenubarTrigger>更新</MenubarTrigger>
         <MenubarContent>
           <MenubarGroup>
@@ -54,7 +55,8 @@ export function MenubarDemo() {
             ) : null}
           </MenubarGroup>
         </MenubarContent>
-      </MenubarMenu>
+      </MenubarMenu> */}
+      <UpdateControls />
     </Menubar>
   );
 }

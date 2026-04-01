@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { ReactNode } from "react";
 import { Check, Cpu, KeyRound, Puzzle, Settings2, Wrench } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   loadAgentSettings,
   saveAgentSettings,
 } from "@/lib/agent-settings";
+import { useIsBreakpoint } from "@/hooks/use-is-breakpoint";
 
 function SettingsField({
   label,
@@ -58,10 +60,15 @@ function Textarea(props: React.ComponentProps<"textarea">) {
   );
 }
 
-export function AgentSettingsDialog() {
+type AgentSettingsDialogProps = {
+  trigger?: ReactNode;
+};
+
+export function AgentSettingsDialog({ trigger }: AgentSettingsDialogProps = {}) {
   const [open, setOpen] = useState(false);
   const [settings, setSettings] = useState<AgentSettings>(defaultAgentSettings);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const isDesktopTabs = useIsBreakpoint("min", 768);
 
   const skillCount = useMemo(
     () => settings.skills.split("\n").map((item) => item.trim()).filter(Boolean).length,
@@ -111,22 +118,28 @@ export function AgentSettingsDialog() {
   return (
     <Dialog open={open} onOpenChange={openDialog}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="icon-sm" className="shrink-0">
-          <Settings2 className="size-4" />
-          <span className="sr-only">Open agent settings</span>
-        </Button>
+        {trigger ?? (
+          <Button variant="outline" size="icon-sm" className="shrink-0">
+            <Settings2 className="size-4" />
+            <span className="sr-only">Open agent settings</span>
+          </Button>
+        )}
       </DialogTrigger>
 
-      <DialogContent className="max-w-[min(960px,calc(100vw-2rem))] overflow-hidden p-0 sm:max-w-[960px]">
-        <DialogHeader className="border-b px-6 pt-6 pb-4">
+      <DialogContent className="h-[calc(100vh-1rem)] max-h-[860px] w-[calc(100vw-1rem)] max-w-[960px] overflow-hidden p-0 sm:h-[min(860px,calc(100vh-2rem))] sm:w-[min(960px,calc(100vw-2rem))]">
+        <DialogHeader className="shrink-0 border-b px-4 pt-4 pb-3 sm:px-6 sm:pt-6 sm:pb-4">
           <DialogTitle>Agent Settings</DialogTitle>
           <DialogDescription>
             配置和 Cursor 类似的 agent 参数，包括模型连接、规则、skills 与 MCP 服务器。
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="model" className="max-h-[78vh] min-h-[600px] overflow-hidden md:flex-row md:gap-0" orientation="vertical">
-          <TabsList variant="line" className="flex w-full shrink-0 flex-row gap-2 overflow-x-auto border-b bg-muted/30 px-4 py-3 md:h-auto md:w-[220px] md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">
+        <Tabs
+          defaultValue="model"
+          className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row md:gap-0"
+          orientation={isDesktopTabs ? "vertical" : "horizontal"}
+        >
+          <TabsList variant="line" className="no-scrollbar flex w-full shrink-0 flex-row gap-2 overflow-x-auto border-b bg-muted/30 px-3 py-2 sm:px-4 sm:py-3 md:h-auto md:w-[220px] md:flex-col md:border-b-0 md:border-r md:px-3 md:py-4">
             <TabsTrigger value="model">
               <Cpu className="size-4" />
               模型
@@ -145,7 +158,7 @@ export function AgentSettingsDialog() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
             <TabsContent value="model" className="mt-0 space-y-6">
               <div className="rounded-xl border border-border bg-muted/20 p-4">
                 <p className="text-sm font-medium">DeepSeek 推荐填写方式</p>
@@ -352,7 +365,7 @@ export function AgentSettingsDialog() {
           </div>
         </Tabs>
 
-        <DialogFooter className="items-center justify-between px-6">
+        <DialogFooter className="items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             {savedAt ? (
               <>

@@ -1,41 +1,63 @@
 import { Button } from "@/components/tiptap-ui-primitive/button"
 
 // --- Icons ---
+import { EyeCareIcon } from "@/components/tiptap-icons/eye-care-icon"
 import { MoonStarIcon } from "@/components/tiptap-icons/moon-star-icon"
 import { SunIcon } from "@/components/tiptap-icons/sun-icon"
 import { useEffect, useState } from "react"
 
+type ThemeMode = "light" | "eye-care" | "dark"
+
+const THEME_STORAGE_KEY = "knowledge-base-theme-mode"
+
 export function ThemeToggle() {
-  const [isDarkMode, setIsDarkMode] = useState<boolean>(false)
+  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") {
+      return "light"
+    }
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    const handleChange = () => setIsDarkMode(mediaQuery.matches)
-    mediaQuery.addEventListener("change", handleChange)
-    return () => mediaQuery.removeEventListener("change", handleChange)
-  }, [])
+    const storedMode = window.localStorage.getItem(THEME_STORAGE_KEY) as
+      | ThemeMode
+      | null
 
-  useEffect(() => {
-    const initialDarkMode =
+    if (storedMode === "light" || storedMode === "eye-care" || storedMode === "dark") {
+      return storedMode
+    }
+
+    const prefersDarkMode =
       !!document.querySelector('meta[name="color-scheme"][content="dark"]') ||
       window.matchMedia("(prefers-color-scheme: dark)").matches
-    setIsDarkMode(initialDarkMode)
-  }, [])
+
+    return prefersDarkMode ? "dark" : "light"
+  })
 
   useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDarkMode)
-  }, [isDarkMode])
+    document.documentElement.classList.toggle("dark", themeMode === "dark")
+    document.documentElement.classList.toggle("eye-care", themeMode === "eye-care")
+    window.localStorage.setItem(THEME_STORAGE_KEY, themeMode)
+  }, [themeMode])
 
-  const toggleDarkMode = () => setIsDarkMode((isDark) => !isDark)
+  const cycleThemeMode = () => {
+    setThemeMode((currentMode) => {
+      if (currentMode === "light") return "eye-care"
+      if (currentMode === "eye-care") return "dark"
+      return "light"
+    })
+  }
+
+  const nextModeLabel =
+    themeMode === "light" ? "护眼模式" : themeMode === "eye-care" ? "深色模式" : "浅色模式"
 
   return (
     <Button
-      onClick={toggleDarkMode}
-      aria-label={`Switch to ${isDarkMode ? "light" : "dark"} mode`}
+      onClick={cycleThemeMode}
+      aria-label={`Switch to ${nextModeLabel}`}
       variant="ghost"
     >
-      {isDarkMode ? (
+      {themeMode === "dark" ? (
         <MoonStarIcon className="tiptap-button-icon" />
+      ) : themeMode === "eye-care" ? (
+        <EyeCareIcon className="tiptap-button-icon" />
       ) : (
         <SunIcon className="tiptap-button-icon" />
       )}

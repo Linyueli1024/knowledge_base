@@ -7,6 +7,10 @@ body {
   .dark & {
     --tt-theme-text: var(--tt-gray-dark-900);
   }
+
+  .eye-care & {
+    --tt-theme-text: #5a4724;
+  }
 }
 
 body {

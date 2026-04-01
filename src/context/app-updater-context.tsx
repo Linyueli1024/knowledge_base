@@ -67,7 +67,7 @@ export function AppUpdaterProvider({ children }: { children: ReactNode }) {
               ? defaultStatus
               : {
                   phase: "upToDate",
-                  message: "当前已经是最新版本",
+                  message: "已是最新",
                 },
           );
           return { hasUpdate: false };

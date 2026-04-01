@@ -91,6 +91,23 @@ export const Toolbar = forwardRef<HTMLDivElement, ToolbarProps>(
         data-variant={variant}
         className={cn("tiptap-toolbar", className)}
         {...props}
+        onWheel={(event) => {
+          props.onWheel?.(event)
+          if (event.defaultPrevented) return
+
+          const toolbar = toolbarRef.current
+          if (!toolbar) return
+
+          const nextDelta =
+            Math.abs(event.deltaX) > Math.abs(event.deltaY)
+              ? event.deltaX
+              : event.deltaY
+
+          if (nextDelta === 0) return
+
+          event.preventDefault()
+          toolbar.scrollLeft += nextDelta
+        }}
       >
         {children}
       </div>

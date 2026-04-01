@@ -27,6 +27,7 @@ import {
 import { CreateFileDialog } from "@/components/create-file-dialog";
 import { CreateFolderDialog } from "@/components/create-folder-dialog";
 const VAULT_STORAGE_KEY = "knowledge-base-vault-path";
+export const MAX_OPEN_FILES = 10;
 
 function sanitizeParentDir(dir: string): string {
   return dir.replace(/\\/g, "/").replace(/^\/+|\/+$/g, "");
@@ -54,6 +55,7 @@ function toMarkdownRelativePath(relativePath: string): string {
 type VaultContextValue = {
   vaultPath: string | null;
   activeFile: VaultFileEntry | null;
+  openFiles: VaultFileEntry[];
   content: string;
   dirty: boolean;
   loading: boolean;
@@ -61,6 +63,9 @@ type VaultContextValue = {
   error: string | null;
   setContent: (value: string) => void;
   save: () => Promise<void>;
+  selectFile: (file: VaultFileEntry) => Promise<void>;
+  closeFile: (relativePath: string) => Promise<void>;
+  closeAllFiles: (shouldPersist: boolean) => Promise<void>;
   renameNote: (relativePath: string, nextName: string) => Promise<void>;
   isTauriApp: boolean;
 };
@@ -89,6 +94,11 @@ type VaultExplorerContextValue = {
 const VaultContext = createContext<VaultContextValue | null>(null);
 const VaultExplorerContext = createContext<VaultExplorerContextValue | null>(null);
 
+type FileSessionState = {
+  content: string;
+  savedContent: string;
+};
+
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [vaultPath, setVaultPath] = useState<string | null>(() => {
     try {
@@ -100,8 +110,8 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const [directories, setDirectories] = useState<VaultDirectoryEntry[]>([]);
   const [files, setFiles] = useState<VaultFileEntry[]>([]);
   const [activeFile, setActiveFile] = useState<VaultFileEntry | null>(null);
-  const [content, setContentState] = useState("");
-  const [savedContent, setSavedContent] = useState("");
+  const [openFiles, setOpenFiles] = useState<VaultFileEntry[]>([]);
+  const [fileSessions, setFileSessions] = useState<Record<string, FileSessionState>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,25 +123,64 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const isTauriApp = isTauri();
   const autosaveTimerRef = useRef<number | null>(null);
 
+  const content = activeFile ? (fileSessions[activeFile.relativePath]?.content ?? "") : "";
+  const savedContent = activeFile
+    ? (fileSessions[activeFile.relativePath]?.savedContent ?? "")
+    : "";
   const dirty = content !== savedContent;
 
+  const upsertOpenFile = useCallback((file: VaultFileEntry) => {
+    setOpenFiles((prev) => {
+      const index = prev.findIndex((entry) => entry.relativePath === file.relativePath);
+      if (index === -1) {
+        return [...prev, file];
+      }
+
+      const next = [...prev];
+      next[index] = file;
+      return next;
+    });
+  }, []);
+
+  const persistFileContent = useCallback(
+    async (relativePath: string) => {
+      if (!vaultPath || !isTauriApp) return;
+
+      const session = fileSessions[relativePath];
+      if (!session || session.content === session.savedContent) return;
+
+      if (autosaveTimerRef.current !== null && activeFile?.relativePath === relativePath) {
+        window.clearTimeout(autosaveTimerRef.current);
+        autosaveTimerRef.current = null;
+      }
+
+      setSaving(true);
+      try {
+        const contentToSave = session.content;
+        await writeMarkdownFile(vaultPath, relativePath, contentToSave);
+        setFileSessions((prev) => {
+          const current = prev[relativePath];
+          if (!current) return prev;
+
+          return {
+            ...prev,
+            [relativePath]: {
+              ...current,
+              savedContent: contentToSave,
+            },
+          };
+        });
+      } finally {
+        setSaving(false);
+      }
+    },
+    [vaultPath, isTauriApp, fileSessions, activeFile],
+  );
+
   const persistActiveContent = useCallback(async () => {
-    if (!vaultPath || !activeFile || !isTauriApp) return;
-    if (!dirty) return;
-
-    if (autosaveTimerRef.current !== null) {
-      window.clearTimeout(autosaveTimerRef.current);
-      autosaveTimerRef.current = null;
-    }
-
-    setSaving(true);
-    try {
-      await writeMarkdownFile(vaultPath, activeFile.relativePath, content);
-      setSavedContent(content);
-    } finally {
-      setSaving(false);
-    }
-  }, [vaultPath, activeFile, isTauriApp, dirty, content]);
+    if (!activeFile) return;
+    await persistFileContent(activeFile.relativePath);
+  }, [activeFile, persistFileContent]);
 
   const refreshFiles = useCallback(async () => {
     if (!vaultPath || !isTauriApp) return;
@@ -166,9 +215,22 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       autosaveTimerRef.current = null;
       setSaving(true);
       setError(null);
-      void writeMarkdownFile(vaultPath, activeFile.relativePath, content)
+      const activePath = activeFile.relativePath;
+      const contentToSave = content;
+      void writeMarkdownFile(vaultPath, activePath, contentToSave)
         .then(() => {
-          setSavedContent(content);
+          setFileSessions((prev) => {
+            const session = prev[activePath];
+            if (!session) return prev;
+
+            return {
+              ...prev,
+              [activePath]: {
+                ...session,
+                savedContent: contentToSave,
+              },
+            };
+          });
         })
         .catch((e) => {
           setError(e instanceof Error ? e.message : String(e));
@@ -189,20 +251,34 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   const loadFile = useCallback(
     async (file: VaultFileEntry) => {
       if (!vaultPath || !isTauriApp) return;
+      const existingSession = fileSessions[file.relativePath];
+      if (existingSession) {
+        setError(null);
+        upsertOpenFile(file);
+        setActiveFile(file);
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const text = await readMarkdownFile(vaultPath, file.relativePath);
+        upsertOpenFile(file);
         setActiveFile(file);
-        setContentState(text);
-        setSavedContent(text);
+        setFileSessions((prev) => ({
+          ...prev,
+          [file.relativePath]: {
+            content: text,
+            savedContent: text,
+          },
+        }));
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setLoading(false);
       }
     },
-    [vaultPath, isTauriApp],
+    [vaultPath, isTauriApp, fileSessions, openFiles.length, upsertOpenFile],
   );
 
   const openVaultFolder = useCallback(async () => {
@@ -226,35 +302,115 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       /* ignore */
     }
     setActiveFile(null);
-    setContentState("");
-    setSavedContent("");
+    setOpenFiles([]);
+    setFileSessions({});
   }, [isTauriApp]);
 
   const selectFile = useCallback(
     async (file: VaultFileEntry) => {
       if (!vaultPath || !isTauriApp) return;
+      if (activeFile?.relativePath && activeFile.relativePath !== file.relativePath) {
+        await persistFileContent(activeFile.relativePath);
+      }
       await loadFile(file);
     },
-    [vaultPath, isTauriApp, loadFile],
+    [vaultPath, isTauriApp, activeFile, persistFileContent, loadFile],
   );
 
   const setContent = useCallback((value: string) => {
-    setContentState(value);
-  }, []);
+    setFileSessions((prev) => {
+      if (!activeFile) return prev;
+
+      const session = prev[activeFile.relativePath];
+      if (!session || session.content === value) return prev;
+
+      return {
+        ...prev,
+        [activeFile.relativePath]: {
+          ...session,
+          content: value,
+        },
+      };
+    });
+  }, [activeFile]);
 
   const save = useCallback(async () => {
-    if (!vaultPath || !activeFile || !isTauriApp) return;
+    if (!activeFile) return;
     setLoading(true);
     setError(null);
     try {
-      await writeMarkdownFile(vaultPath, activeFile.relativePath, content);
-      setSavedContent(content);
+      await persistFileContent(activeFile.relativePath);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setLoading(false);
     }
-  }, [vaultPath, activeFile, content, isTauriApp]);
+  }, [activeFile, persistFileContent]);
+
+  const closeFileInternal = useCallback(
+    async (relativePath: string, shouldPersist: boolean) => {
+      if (shouldPersist) {
+        await persistFileContent(relativePath);
+      }
+
+      let closingIndex = -1;
+      let nextOpenFiles: VaultFileEntry[] = [];
+
+      setOpenFiles((prev) => {
+        closingIndex = prev.findIndex((file) => file.relativePath === relativePath);
+        if (closingIndex === -1) {
+          nextOpenFiles = prev;
+          return prev;
+        }
+
+        nextOpenFiles = prev.filter((file) => file.relativePath !== relativePath);
+        return nextOpenFiles;
+      });
+
+      if (closingIndex === -1) return;
+
+      setFileSessions((prev) => {
+        if (!(relativePath in prev)) return prev;
+
+        const next = { ...prev };
+        delete next[relativePath];
+        return next;
+      });
+
+      setActiveFile((prev) => {
+        if (prev?.relativePath !== relativePath) {
+          return prev;
+        }
+
+        if (nextOpenFiles.length === 0) {
+          return null;
+        }
+
+        return nextOpenFiles[Math.min(closingIndex, nextOpenFiles.length - 1)];
+      });
+    },
+    [persistFileContent],
+  );
+
+  const closeFile = useCallback(
+    async (relativePath: string) => {
+      await closeFileInternal(relativePath, true);
+    },
+    [closeFileInternal],
+  );
+  const closeAllFiles = useCallback(
+    async (shouldPersist: boolean) => {
+      if (shouldPersist) {
+        for (const file of openFiles) {
+          await persistFileContent(file.relativePath);
+        }
+      }
+      setOpenFiles([]);
+      setActiveFile(null);
+      setFileSessions({}); 
+    },
+    [openFiles, persistFileContent],
+  );
 
   const commitNewNote = useCallback(
     async (rawName: string) => {
@@ -383,11 +539,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setError(null);
       try {
         await deleteVaultFile(vaultPath, relativePath);
-        if (activeFile?.relativePath === relativePath) {
-          setActiveFile(null);
-          setContentState("");
-          setSavedContent("");
-        }
+        await closeFileInternal(relativePath, false);
         await refreshFiles();
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
@@ -395,7 +547,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [vaultPath, isTauriApp, activeFile, refreshFiles],
+    [vaultPath, isTauriApp, closeFileInternal, refreshFiles],
   );
 
   const deleteFolder = useCallback(
@@ -408,14 +560,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       setError(null);
       try {
         await deleteVaultDirectory(vaultPath, relativePath);
-        if (
-          activeFile &&
-          (activeFile.relativePath === relativePath ||
-            activeFile.relativePath.startsWith(`${relativePath}/`))
-        ) {
-          setActiveFile(null);
-          setContentState("");
-          setSavedContent("");
+        const pathsToClose = openFiles
+          .filter(
+            (file) =>
+              file.relativePath === relativePath ||
+              file.relativePath.startsWith(`${relativePath}/`),
+          )
+          .map((file) => file.relativePath);
+
+        for (const path of pathsToClose) {
+          await closeFileInternal(path, false);
         }
         await refreshFiles();
       } catch (e) {
@@ -424,7 +578,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     },
-    [vaultPath, isTauriApp, activeFile, refreshFiles],
+    [vaultPath, isTauriApp, openFiles, closeFileInternal, refreshFiles],
   );
 
   const renameNote = useCallback(
@@ -465,12 +619,25 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         }
         await renameVaultFile(vaultPath, relativePath, nextRelativePath);
         await refreshFiles();
-        if (activeFile?.relativePath === relativePath) {
-          setActiveFile({
-            relativePath: nextRelativePath,
-            name: baseName,
-          });
-        }
+        const renamedFile = {
+          relativePath: nextRelativePath,
+          name: baseName,
+        };
+        setOpenFiles((prev) =>
+          prev.map((file) => (file.relativePath === relativePath ? renamedFile : file)),
+        );
+        setFileSessions((prev) => {
+          const session = prev[relativePath];
+          if (!session) return prev;
+
+          const next = { ...prev };
+          delete next[relativePath];
+          next[nextRelativePath] = session;
+          return next;
+        });
+        setActiveFile((prev) =>
+          prev?.relativePath === relativePath ? renamedFile : prev,
+        );
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
         throw e;
@@ -522,16 +689,66 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         await renameVaultDirectory(vaultPath, relativePath, nextRelativePath);
         await refreshFiles();
 
-        if (activePath && activeInsideFolder) {
-          const suffix = activePath === relativePath ? "" : activePath.slice(relativePath.length);
+        setOpenFiles((prev) =>
+          prev.map((file) => {
+            if (
+              file.relativePath !== relativePath &&
+              !file.relativePath.startsWith(`${relativePath}/`)
+            ) {
+              return file;
+            }
+
+            const suffix =
+              file.relativePath === relativePath
+                ? ""
+                : file.relativePath.slice(relativePath.length);
+            const updatedRelativePath = `${nextRelativePath}${suffix}`;
+
+            return {
+              relativePath: updatedRelativePath,
+              name: stripMarkdownExtension(
+                updatedRelativePath.split("/").pop() ?? updatedRelativePath,
+              ),
+            };
+          }),
+        );
+        setFileSessions((prev) => {
+          const next: Record<string, FileSessionState> = {};
+
+          for (const [path, session] of Object.entries(prev)) {
+            if (path !== relativePath && !path.startsWith(`${relativePath}/`)) {
+              next[path] = session;
+              continue;
+            }
+
+            const suffix = path === relativePath ? "" : path.slice(relativePath.length);
+            next[`${nextRelativePath}${suffix}`] = session;
+          }
+
+          return next;
+        });
+        setActiveFile((prev) => {
+          if (!prev) return prev;
+          if (
+            prev.relativePath !== relativePath &&
+            !prev.relativePath.startsWith(`${relativePath}/`)
+          ) {
+            return prev;
+          }
+
+          const suffix =
+            prev.relativePath === relativePath
+              ? ""
+              : prev.relativePath.slice(relativePath.length);
           const updatedRelativePath = `${nextRelativePath}${suffix}`;
-          setActiveFile({
+
+          return {
             relativePath: updatedRelativePath,
             name: stripMarkdownExtension(
               updatedRelativePath.split("/").pop() ?? updatedRelativePath,
             ),
-          });
-        }
+          };
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
         throw e;
@@ -542,10 +759,22 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     [vaultPath, isTauriApp, activeFile, persistActiveContent, refreshFiles],
   );
 
+  useEffect(() => {
+    if (files.length === 0) return;
+
+    const fileMap = new Map(files.map((file) => [file.relativePath, file]));
+
+    setOpenFiles((prev) =>
+      prev.map((file) => fileMap.get(file.relativePath) ?? file),
+    );
+    setActiveFile((prev) => (prev ? (fileMap.get(prev.relativePath) ?? prev) : prev));
+  }, [files]);
+
   const value = useMemo<VaultContextValue>(
     () => ({
       vaultPath,
       activeFile,
+      openFiles,
       content,
       dirty,
       loading,
@@ -553,12 +782,16 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       error,
       setContent,
       save,
+      selectFile,
+      closeFile,
+      closeAllFiles,
       renameNote,
       isTauriApp,
     }),
     [
       vaultPath,
       activeFile,
+      openFiles,
       content,
       dirty,
       loading,
@@ -566,6 +799,9 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       error,
       setContent,
       save,
+      selectFile,
+      closeFile,
+      closeAllFiles,
       renameNote,
       isTauriApp,
     ],

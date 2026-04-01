@@ -205,6 +205,22 @@
     0px 6px 8px 0px rgba(0, 0, 0, 0.22), 0px 2px 3px 0px rgba(0, 0, 0, 0.12);
 }
 
+.eye-care {
+  --tt-bg-color: #f6efd9;
+  --tt-border-color: rgba(129, 104, 53, 0.18);
+  --tt-border-color-tint: rgba(129, 104, 53, 0.1);
+  --tt-sidebar-bg-color: #efe4be;
+  --tt-scrollbar-color: rgba(129, 104, 53, 0.22);
+  --tt-cursor-color: #b07c1f;
+  --tt-selection-color: rgba(196, 161, 86, 0.22);
+  --tt-card-bg-color: #fbf5e3;
+  --tt-card-border-color: rgba(129, 104, 53, 0.14);
+  --tt-shadow-elevated-md:
+    0px 14px 40px 0px rgba(103, 78, 33, 0.14),
+    0px 8px 18px 0px rgba(103, 78, 33, 0.08),
+    0px 2px 4px 0px rgba(103, 78, 33, 0.08);
+}
+
 /* Text colors */
 :root {
   --tt-color-text-gray: hsl(45, 2%, 46%);
@@ -250,6 +266,28 @@
   --tt-color-text-red-contrast: hsla(0, 67%, 60%, 0.25);
 }
 
+.eye-care {
+  --tt-color-text-gray: hsl(38, 16%, 40%);
+  --tt-color-text-brown: hsl(24, 34%, 37%);
+  --tt-color-text-orange: hsl(28, 74%, 42%);
+  --tt-color-text-yellow: hsl(42, 62%, 41%);
+  --tt-color-text-green: hsl(138, 24%, 34%);
+  --tt-color-text-blue: hsl(200, 42%, 38%);
+  --tt-color-text-purple: hsl(274, 24%, 46%);
+  --tt-color-text-pink: hsl(330, 40%, 48%);
+  --tt-color-text-red: hsl(8, 56%, 50%);
+
+  --tt-color-text-gray-contrast: hsla(39, 26%, 26%, 0.12);
+  --tt-color-text-brown-contrast: hsla(18, 43%, 36%, 0.18);
+  --tt-color-text-orange-contrast: hsla(24, 73%, 45%, 0.16);
+  --tt-color-text-yellow-contrast: hsla(44, 82%, 44%, 0.18);
+  --tt-color-text-green-contrast: hsla(126, 29%, 34%, 0.16);
+  --tt-color-text-blue-contrast: hsla(202, 54%, 38%, 0.16);
+  --tt-color-text-purple-contrast: hsla(274, 37%, 44%, 0.16);
+  --tt-color-text-pink-contrast: hsla(331, 60%, 46%, 0.16);
+  --tt-color-text-red-contrast: hsla(8, 79%, 48%, 0.18);
+}
+
 /* Highlight colors */
 :root {
   --tt-color-highlight-yellow: #fef9c3;
@@ -293,4 +331,26 @@
   --tt-color-highlight-brown-contrast: rgba(184, 101, 69, 0.25);
   --tt-color-highlight-orange-contrast: rgba(233, 126, 37, 0.2);
   --tt-color-highlight-pink-contrast: rgba(220, 76, 145, 0.22);
+}
+
+.eye-care {
+  --tt-color-highlight-yellow: #efe3a4;
+  --tt-color-highlight-green: #d7e5bf;
+  --tt-color-highlight-blue: #d6e3e8;
+  --tt-color-highlight-purple: #e6daec;
+  --tt-color-highlight-red: #eed2ce;
+  --tt-color-highlight-gray: #ece7da;
+  --tt-color-highlight-brown: #e8ddd1;
+  --tt-color-highlight-orange: #f0dcc2;
+  --tt-color-highlight-pink: #f0dfe6;
+
+  --tt-color-highlight-yellow-contrast: #e0cd6f;
+  --tt-color-highlight-green-contrast: #c3d8aa;
+  --tt-color-highlight-blue-contrast: #c0d6de;
+  --tt-color-highlight-purple-contrast: #d8c6e4;
+  --tt-color-highlight-red-contrast: #e3b8b2;
+  --tt-color-highlight-gray-contrast: rgba(107, 88, 54, 0.12);
+  --tt-color-highlight-brown-contrast: rgba(152, 118, 86, 0.18);
+  --tt-color-highlight-orange-contrast: rgba(201, 132, 61, 0.18);
+  --tt-color-highlight-pink-contrast: rgba(182, 110, 145, 0.16);
 }

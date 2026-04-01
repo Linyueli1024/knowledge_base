@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Bot, FileText } from "lucide-react";
+import { Bot, FileText, Settings2 } from "lucide-react";
 
+import { AgentSettingsDialog } from "@/components/agent-settings-dialog";
 import { AgentChatSidebar } from "@/components/agent-chat-sidebar";
 import { EditableNoteTitle } from "@/components/editable-note-title";
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor";
@@ -64,10 +65,10 @@ export function SimpleEditorComponent() {
     <div
       className={cn(
         "flex min-h-0 min-w-0 flex-1 bg-background",
-        isAgentDocked ? "flex-row" : "flex-col"
+        isAgentDocked ? "flex-row" : "flex-col",
       )}
     >
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <section className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-4 py-2">
           <div className="min-w-0 flex-1">
             <EditableNoteTitle className="h-8 border-0 bg-transparent px-0 text-sm font-medium text-foreground shadow-none focus-visible:ring-0" />
@@ -77,20 +78,32 @@ export function SimpleEditorComponent() {
                 {saving ? " · 保存中" : dirty ? " · 正在同步" : " · 已保存"}
               </p>
             ) : (
-              <p className="text-xs text-muted-foreground">在左侧选择笔记，或使用菜单新建</p>
+              <p className="text-xs text-muted-foreground">
+                在左侧选择笔记
+              </p>
             )}
           </div>
           {!isAgentDocked ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="shrink-0 gap-1.5"
-              onClick={() => setAgentSheetOpen(true)}
-            >
-              <Bot className="size-4" />
-              Agent
-            </Button>
+            <div className="flex shrink-0 items-center gap-2">
+              <AgentSettingsDialog
+                trigger={
+                  <Button type="button" variant="outline" size="icon-sm" className="shrink-0">
+                    <Settings2 className="size-4" />
+                    <span className="sr-only">Open agent settings</span>
+                  </Button>
+                }
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0 gap-1.5"
+                onClick={() => setAgentSheetOpen(true)}
+              >
+                <Bot className="size-4" />
+                Agent
+              </Button>
+            </div>
           ) : null}
         </div>
 
@@ -113,7 +126,7 @@ export function SimpleEditorComponent() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {isAgentDocked ? (
         <aside className="flex h-full min-h-0 w-[23rem] shrink-0 border-l border-sidebar-border bg-sidebar">

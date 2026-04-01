@@ -43,6 +43,18 @@
     --tt-button-disabled-bg-color: var(--tt-gray-dark-a-50);
   }
 
+  .eye-care & {
+    --tt-button-default-bg-color: rgba(116, 90, 40, 0.06);
+    --tt-button-hover-bg-color: rgba(116, 90, 40, 0.12);
+    --tt-button-active-bg-color: rgba(176, 124, 31, 0.14);
+    --tt-button-active-bg-color-emphasized: rgba(176, 124, 31, 0.2);
+    --tt-button-active-bg-color-subdued: rgba(176, 124, 31, 0.14);
+    --tt-button-active-hover-bg-color: rgba(176, 124, 31, 0.18);
+    --tt-button-active-hover-bg-color-emphasized: rgba(176, 124, 31, 0.24);
+    --tt-button-active-hover-bg-color-subdued: rgba(176, 124, 31, 0.18);
+    --tt-button-disabled-bg-color: rgba(116, 90, 40, 0.04);
+  }
+
   /************************************************** 
       Default button text color 
   **************************************************/
@@ -63,6 +75,15 @@
     --tt-button-active-text-color-emphasized: var(--tt-gray-dark-a-900);
     --tt-button-active-text-color-subdued: var(--tt-gray-dark-a-900);
     --tt-button-disabled-text-color: var(--tt-gray-dark-a-300);
+  }
+
+  .eye-care & {
+    --tt-button-default-text-color: rgba(90, 71, 36, 0.82);
+    --tt-button-hover-text-color: rgba(73, 56, 24, 0.96);
+    --tt-button-active-text-color: rgba(73, 56, 24, 0.98);
+    --tt-button-active-text-color-emphasized: rgba(73, 56, 24, 0.98);
+    --tt-button-active-text-color-subdued: rgba(73, 56, 24, 0.98);
+    --tt-button-disabled-text-color: rgba(90, 71, 36, 0.35);
   }
 
   /************************************************** 
@@ -87,6 +108,15 @@
     --tt-button-disabled-icon-color: var(--tt-gray-dark-a-400);
   }
 
+  .eye-care & {
+    --tt-button-default-icon-color: rgba(90, 71, 36, 0.82);
+    --tt-button-hover-icon-color: rgba(73, 56, 24, 0.96);
+    --tt-button-active-icon-color: #b07c1f;
+    --tt-button-active-icon-color-emphasized: #9a6b16;
+    --tt-button-active-icon-color-subdued: rgba(73, 56, 24, 0.96);
+    --tt-button-disabled-icon-color: rgba(90, 71, 36, 0.35);
+  }
+
   /************************************************** 
       Default button subicon color 
   **************************************************/
@@ -107,6 +137,15 @@
     --tt-button-active-icon-sub-color-emphasized: var(--tt-gray-dark-a-400);
     --tt-button-active-icon-sub-color-subdued: var(--tt-gray-dark-a-300);
     --tt-button-disabled-icon-sub-color: var(--tt-gray-dark-a-100);
+  }
+
+  .eye-care & {
+    --tt-button-default-icon-sub-color: rgba(90, 71, 36, 0.45);
+    --tt-button-hover-icon-sub-color: rgba(90, 71, 36, 0.62);
+    --tt-button-active-icon-sub-color: rgba(90, 71, 36, 0.5);
+    --tt-button-active-icon-sub-color-emphasized: rgba(90, 71, 36, 0.65);
+    --tt-button-active-icon-sub-color-subdued: rgba(90, 71, 36, 0.5);
+    --tt-button-disabled-icon-sub-color: rgba(90, 71, 36, 0.2);
   }
 
   /************************************************** 
@@ -133,6 +172,15 @@
     );
     --tt-button-active-dropdown-arrows-color-subdued: var(--tt-gray-dark-a-600);
     --tt-button-disabled-dropdown-arrows-color: var(--tt-gray-dark-a-400);
+  }
+
+  .eye-care & {
+    --tt-button-default-dropdown-arrows-color: rgba(90, 71, 36, 0.76);
+    --tt-button-hover-dropdown-arrows-color: rgba(73, 56, 24, 0.9);
+    --tt-button-active-dropdown-arrows-color: rgba(90, 71, 36, 0.76);
+    --tt-button-active-dropdown-arrows-color-emphasized: rgba(73, 56, 24, 0.9);
+    --tt-button-active-dropdown-arrows-color-subdued: rgba(90, 71, 36, 0.76);
+    --tt-button-disabled-dropdown-arrows-color: rgba(90, 71, 36, 0.35);
   }
 
   /* ----------------------------------------------------------------
@@ -184,6 +232,18 @@
       --tt-button-disabled-bg-color: var(--transparent);
     }
 
+    .eye-care & {
+      --tt-button-default-bg-color: var(--transparent);
+      --tt-button-hover-bg-color: rgba(116, 90, 40, 0.12);
+      --tt-button-active-bg-color: rgba(176, 124, 31, 0.1);
+      --tt-button-active-bg-color-emphasized: rgba(176, 124, 31, 0.16);
+      --tt-button-active-bg-color-subdued: rgba(176, 124, 31, 0.1);
+      --tt-button-active-hover-bg-color: rgba(176, 124, 31, 0.14);
+      --tt-button-active-hover-bg-color-emphasized: rgba(176, 124, 31, 0.2);
+      --tt-button-active-hover-bg-color-subdued: rgba(176, 124, 31, 0.14);
+      --tt-button-disabled-bg-color: var(--transparent);
+    }
+
     /************************************************** 
         Ghost button text color 
     **************************************************/
@@ -204,6 +264,15 @@
       --tt-button-active-text-color-emphasized: var(--tt-gray-dark-a-900);
       --tt-button-active-text-color-subdued: var(--tt-gray-dark-a-900);
       --tt-button-disabled-text-color: var(--tt-gray-dark-a-300);
+    }
+
+    .eye-care & {
+      --tt-button-default-text-color: rgba(90, 71, 36, 0.82);
+      --tt-button-hover-text-color: rgba(73, 56, 24, 0.96);
+      --tt-button-active-text-color: rgba(73, 56, 24, 0.98);
+      --tt-button-active-text-color-emphasized: rgba(73, 56, 24, 0.98);
+      --tt-button-active-text-color-subdued: rgba(73, 56, 24, 0.98);
+      --tt-button-disabled-text-color: rgba(90, 71, 36, 0.35);
     }
 
     /************************************************** 
@@ -228,6 +297,15 @@
       --tt-button-disabled-icon-color: var(--tt-gray-dark-a-400);
     }
 
+    .eye-care & {
+      --tt-button-default-icon-color: rgba(90, 71, 36, 0.82);
+      --tt-button-hover-icon-color: rgba(73, 56, 24, 0.96);
+      --tt-button-active-icon-color: #b07c1f;
+      --tt-button-active-icon-color-emphasized: #9a6b16;
+      --tt-button-active-icon-color-subdued: rgba(73, 56, 24, 0.96);
+      --tt-button-disabled-icon-color: rgba(90, 71, 36, 0.35);
+    }
+
     /************************************************** 
         Ghost button subicon color 
     **************************************************/
@@ -248,6 +326,15 @@
       --tt-button-active-icon-sub-color-emphasized: var(--tt-gray-dark-a-400);
       --tt-button-active-icon-sub-color-subdued: var(--tt-gray-dark-a-300);
       --tt-button-disabled-icon-sub-color: var(--tt-gray-dark-a-100);
+    }
+
+    .eye-care & {
+      --tt-button-default-icon-sub-color: rgba(90, 71, 36, 0.45);
+      --tt-button-hover-icon-sub-color: rgba(90, 71, 36, 0.62);
+      --tt-button-active-icon-sub-color: rgba(90, 71, 36, 0.5);
+      --tt-button-active-icon-sub-color-emphasized: rgba(90, 71, 36, 0.65);
+      --tt-button-active-icon-sub-color-subdued: rgba(90, 71, 36, 0.5);
+      --tt-button-disabled-icon-sub-color: rgba(90, 71, 36, 0.2);
     }
 
     /************************************************** 
@@ -278,6 +365,15 @@
         --tt-gray-dark-a-600
       );
       --tt-button-disabled-dropdown-arrows-color: var(--tt-gray-dark-a-400);
+    }
+
+    .eye-care & {
+      --tt-button-default-dropdown-arrows-color: rgba(90, 71, 36, 0.76);
+      --tt-button-hover-dropdown-arrows-color: rgba(73, 56, 24, 0.9);
+      --tt-button-active-dropdown-arrows-color: rgba(90, 71, 36, 0.76);
+      --tt-button-active-dropdown-arrows-color-emphasized: rgba(73, 56, 24, 0.9);
+      --tt-button-active-dropdown-arrows-color-subdued: rgba(90, 71, 36, 0.76);
+      --tt-button-disabled-dropdown-arrows-color: rgba(90, 71, 36, 0.35);
     }
   }
 
